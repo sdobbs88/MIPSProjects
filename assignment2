@@ -1,0 +1,129 @@
+# This assembly code sorts a hard coded list using the bubble sort method.
+# Note that some of the code from the course slides was used. That code will be referenced in comments below. 
+
+.data	
+	list: 		.word  10, 2, 9, 1, 8, -12, -4, 0, 13, -1
+	space:		.asciiz " "
+	newLine:	.asciiz "\n"
+	beforeSort:	.asciiz "List before bubble sort: "
+	afterSort:	.asciiz "List after bubble sort: "
+.text
+
+main:		
+
+		li $v0, 4
+		la $a0, beforeSort		# Prints before sort
+		syscall
+		
+		addi $a1, $zero, 10		# array size    argument
+		la $a0, list			# array address argument for sort and print
+		
+		jal print			# print array before sort
+		jal sort			# jump and link to sort procedure
+		#jal print			# jump and link to print loop
+		
+		li $v0, 4
+		la $a0, newLine			# Prints newLine
+		syscall
+		la $a0, afterSort		# Prints After Sort
+		syscall
+		
+		jal print			# Print the newly sorted list
+
+		la $a0, newLine			# Prints two new lines
+		syscall				
+		 
+		li $v0, 10			#Exit the program 
+		syscall
+		
+print:		
+		addi $t0, $zero, 0		# Initialize counter to 0
+		addi $t2, $zero, 0		# base address
+		addi $sp, $sp, -12 		# Make room for $ra, $a1, $a0
+		
+		sw $a1, 8($sp)			# Save argument values to stack		
+		sw $a0, 4($sp)			# Save argument values to stack		
+		sw $ra, 0($sp)			# Save $ra onto the stack
+		
+		li $v0, 4
+		la $a0, newLine			# Prints a new line to start
+		syscall
+		
+loop:	
+		beq $t0, 10, ePrint		# branch equal to array size
+		lw  $t1, list($t2)		# Load the $t2 element into $t1
+		li $v0, 1
+		move $a0, $t1		# Prints the current number.
+		syscall	
+		
+		li $v0, 4		# Instruction to print out whats at $a0
+		la $a0, space		# prints a space between entries
+		syscall			# Execute
+		
+		addi $t0, $t0, 1	# increase the counter
+		addi $t2, $t2, 4	# next array element
+		jal loop		# go through the loop again
+ePrint:	
+		
+		lw $ra, 0($sp)		# restore the address which points to the stack
+		lw $a0, 4($sp)		# $a0 argument value restored
+		lw $a1, 8($sp)		# $a1 argument value restored
+		addi $sp, $sp, 12	# stack pointer restored
+		jr $ra			# "jump return" to $ra
+		
+#Note that the swap method below is from the Chapter 2 powerpoints given out by Dr. Su. 
+#Slide number 21 is the slide containing this method. 
+swap: 		
+		sll  $t1, $a1, 2	
+		add $t1, $a0, $t1	
+					
+		lw $t0, 0($t1)		
+		lw $t2, 4($t1)		
+		sw $t2, 0($t1)		
+		sw $t0, 4($t1)		
+		jr $ra			
+#Sort procedure below is from slide 24 of the Chapter 2 powerpoint given by Dr. Su for the course.
+sort:	
+		addi $sp, $sp, -20	#make room on stack for 5 registers
+		sw $ra, 16($sp)		#save $ra on stack
+		sw $s3, 12($sp)		#save $s3 on stack
+		sw $s2, 8($sp)		#save $s2 on stack
+		sw $s1, 4($sp)		#save $s1 on the stack
+		sw $s0, 0($sp)		#save $s0 on stack
+		
+		move $s2, $a0		# save $a0   to $s0 
+		move $s3, $a1		# save $a1 into $s3
+		move $s0, $zero		# i = 0
+#The for1tst, for2tst, exit2 and exit1 procedures are all from the 
+#chapter 2 slides number 23 and 24 given out for the course by Dr. Su. 
+for1tst: 	
+		slt $t0, $s0, $s3	# $t0 = 0 if $s0 >= $s3
+		beq $t0, $zero, exit1	# go to exit1 if $s0 >= $s3
+		addi $s1, $s0, -1 	# j = i = 1
+		
+for2tst:	
+		slti $t0, $s1, 0	# $t0 =1 if $s1 < 0 
+		bne $t0, $zero, exit2	# got to exit2 if $s1 < 0
+		sll $t1, $s1, 2		# $t1 = k
+		add  $t2, $s2, $t1	# $t2 = v + (j * 4)
+		lw  $t3, 0($t2)		# $t3 = v[j]
+		lw  $t4, 4($t2)		# $t4 = v[j + 1]
+		slt $t0, $t4, $t3	# $t0 = 0 if $t4 >= $t3
+		beq $t0, $zero, exit2	# goto exit 2 if $t4 >= $t3
+		move $a0, $s2		# 1st param of swap is v (old $a0)
+		move $a1, $s1		# 2nd param of swap is j
+		jal swap		# call swap procedure
+		addi $s1, $s1, -1	# j -= 1
+		j 	for2tst		# jump to test of inner loop
+		
+exit2:		
+		addi $s0, $s0, 1	# i += 1
+		j	for1tst		#jump to test of outer loop
+		
+exit1: 		
+		lw $s0, 0($sp)		# restore $s0 from stack
+		lw $s1, 4($sp)		# restore $s1 from stack
+		lw $s2, 8($sp)		# restore $s2 from stack 	
+		lw $ra, 16($sp)		# restore stack pointer
+		addi $sp, $sp, 20	# restore stack pointer
+		jr $ra			# return to calling routine
