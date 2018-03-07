@@ -1,0 +1,179 @@
+####################################
+#		Shaun Dobbs		    #
+#		CSCI 3202		    #
+#		Dr. Hongjun Su		    #
+#		April 19, 2017		    #
+#		Assignment 4		    #
+####################################
+.data
+	array: 		.word -1, 67, 20, 15, -61, -21, 100, 89, 809, 10, 103, 13, -104, 69, 52, 90, 2, 30, -12, 20
+	addSpace:	.asciiz " "
+	preMessage:	.asciiz "Before Quick Sort: "
+	postMessage:	.asciiz "After Quick Sort:   "
+	return:		.asciiz "\n"
+
+
+.text	
+main:
+	li $v0, 4			#Prepare system to print message. Code 4
+	la $a0, preMessage	# Print label indicating list has not been sorted
+	syscall			#Tell systel to execute command
+		
+	addi $a1, $zero, 20	# Add the array size to register $a1. Array size is 20
+	la $a0, array		# Load the address of the array to $a0
+		
+	jal output		# print preMessage label
+
+	la $a0, array
+	addi $a1, $zero, 20
+	Jal QUICKSORT
+
+		
+	li $v0, 4
+	la $a0, return		# Prints newLine
+	syscall
+		
+	la $a0, postMessage	# Prints After Sort label
+	syscall
+	
+	jal output
+	
+	lw $ra, 0($sp)		# pop return address from stack
+	lw $a0, 4($sp)		# Restore argument values
+	lw $a1, 8($sp)		# Restore argument value
+	addi $sp, $sp, 12	# Restore Stack pointer
+
+	li $v0, 10 		# Terminate program - syscall 10
+    	syscall
+	
+
+	
+	
+	
+
+output:		
+	addi $t0, $zero, 0	# Initialize counter to 0
+	addi $t2, $zero, 0	# set the base address to 0
+	addi $sp, $sp, -12 	# allocate space for arguments and return address
+	sw $a1, 8($sp)		# push to stack		
+	sw $a0, 4($sp)		# push to stack		
+	sw $ra, 0($sp)		# push return address to stack
+
+loop:	beq $t0, 20, exit_output	# check to see if the branch is equal to the array size
+	lw  $t1, array($t2)		# Load the $t2 element into $t1
+	li $v0, 1
+	move $a0, $t1		# Prints a value
+	syscall	
+	
+	li $v0, 4		# Print value at $a0
+	la $a0, addSpace	# adds a space between the numbers
+	syscall			# Execute
+	
+	addi $t0, $t0, 1	# increment the counter by 1
+	addi $t2, $t2, 4	# get the next element of the array and them loop
+	jal loop
+	
+exit_output:			
+	lw $ra, 0($sp)		# pop return address from stack
+	lw $a0, 4($sp)		# Restore argument values
+	lw $a1, 8($sp)		# Restore argument value
+	addi $sp, $sp, 12	# Restore Stack pointer
+	jr $ra			# jump and return to return address
+
+
+
+QUICKSORT:
+  	add $t0, $zero, $zero 	#Change $t0 to zero
+	subi $t1, $a1, 1
+	add $a1, $zero, $t0
+	add $a2, $zero, $t1
+	subi $sp, $sp, 4
+	sw $ra, 0($sp)
+	Jal Sort
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+
+  	add $v0, $zero, $a0
+	jr $ra
+
+.globl Sort
+Sort:
+	add $t0, $a1, $a2
+	sra $t0, $t0, 1 	#Set the right pivot == 2
+	sll $t0, $t0, 2
+	add $t0, $t0, $a0
+	lw $s0, 0($t0)
+	add $s1, $zero, $a1 	# initialize i
+	add $s2, $zero, $a2 	# initialize j
+
+W1:
+	slt $t0, $s2, $s1
+	bne $t0, $zero, EXITW1  #while (i <= j) **Note refer to java code
+W2:
+	sll $t0, $s1, 2 	# Shift Left logic 
+	add $t0, $t0, $a0
+	lw $t0, 0($t0)
+	slt $t0, $t0, $s0
+	beq $t0, $zero, EXITW2 
+	slt $t0, $s1, $a2
+        beq $t0, $zero, EXITW2
+	addi $s1, $s1, 1
+	j W2
+	
+    	EXITW2:
+    	
+W3:
+	sll $t0, $s2, 2
+	add $t0, $t0, $a0
+	lw $t0, 0($t0)
+	slt $t0, $s0, $t0
+	beq $t0, $zero, EXITW3	#If branch equal to 0, exit loop
+	slt $t0, $a1, $s2
+        beq $t0, $zero, EXITW3	#If branch equal to 0, exit loop
+          subi $s2, $s2, 1
+    j W3
+    
+EXITW3:
+   	slt $t0, $s2, $s1
+   	bne $t0, $zero, EXITI1	#Check to see if branch not equal to zero. If ture, exit
+	sll $t0, $s1, 2
+	add $t0, $t0, $a0
+	lw $t1, 0($t0)
+	sll $t2, $s2, 2
+	add $t2, $t2, $a0
+	lw $t3, 0($t2)
+	sw $t1, 0($t2)
+	sw $t3, 0($t0)
+	addi $s1, $s1, 1
+	subi $s2, $s2, 1
+	
+EXITI1:
+	j W1
+
+EXITW1:
+	slt $t0, $a1, $s2
+	beq $t0, $zero, EXITI2
+  	subi $sp, $sp, 12
+   	sw $a2, 0($sp)
+   	sw $s1, 4($sp)
+    	sw $ra, 8($sp)
+    	add $a2, $s2, $zero
+    	Jal Sort
+    	lw $a2, 0($sp)
+    	lw $s1, 4($sp)
+    	lw $ra, 8($sp)
+    	addi $sp, $sp, 12
+    	
+EXITI2:  
+	slt $t0, $s1, $a2
+	beq $t0, $zero, EXITI3
+    	subi $sp, $sp, 4
+    	sw $ra, 0($sp)
+    	add $a1, $s1, $zero
+    	Jal Sort
+    	lw $ra, 0($sp)
+    	addi $sp, $sp, 4
+    	
+ EXITI3:
+	add $v0, $zero, $a0
+	Jr $ra
